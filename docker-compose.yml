@@ -1,6 +1,9 @@
 services:
   backend:
     image: golang:1.24.3-bookworm
+    container_name: global_chat_backend
+    depends_on:
+      - database
     volumes:
       - ./src/backend:/opt/global_chat
     ports:
@@ -8,3 +11,16 @@ services:
     working_dir: /opt/global_chat
     stdin_open: true
     tty: true
+  database:
+    image: postgres:latest
+    container_name: global_chat_database
+    shm_size: 128mb
+    environment:
+      POSTGRES_PASSWORD: 1111
+    volumes:
+      - ./src/database:/opt/global_chat/sql
+      - ./docker/database:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
