@@ -1,0 +1,10 @@
+services:
+  backend:
+    image: golang:1.24.3-bookworm
+    volumes:
+      - ./src/backend:/opt/global_chat
+    ports:
+      - 8080:8080
+    working_dir: /opt/global_chat
+    stdin_open: true
+    tty: true
