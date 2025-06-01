@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -20,7 +21,32 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:       func(*http.Request) bool { return true },
 }
 
-func mainPageRequest(_ map[string]map[string]Handler) func(http.ResponseWriter, *http.Request) {
+type ResponsePacket struct {
+	Response
+	Id   uint64 `json:"id"`
+	Type string `json:"type"`
+}
+
+func CollectArguments(data any, fields []string) ([]any, error) {
+	if fields == nil {
+		return []any{data}, nil
+	}
+	object, ok := data.(map[string]any)
+	if !ok {
+		return nil, errors.New("invalid arguments")
+	}
+	result := make([]any, len(object))
+	for index, field := range fields {
+		value, exists := object[field]
+		if !exists {
+			return nil, errors.New("key " + field + " is absent")
+		}
+		result[index] = value
+	}
+	return result, nil
+}
+
+func mainPageRequest(api map[string]map[string]Handler) func(http.ResponseWriter, *http.Request) {
 	return func(writer http.ResponseWriter, request *http.Request) {
 		connection, err := upgrader.Upgrade(writer, request, nil)
 		if err != nil {
@@ -31,14 +57,40 @@ func mainPageRequest(_ map[string]map[string]Handler) func(http.ResponseWriter, 
 			var json map[string]any
 			if err := connection.ReadJSON(&json); err != nil {
 				message := "Invalid JSON structure"
-				connection.WriteJSON(Response{Success: false, Data: message})
+				err := connection.WriteJSON(Response{Success: false, Data: message})
+				if err != nil {
+					break
+				}
+				continue
 			}
 			packet, err := ParseRequestJson(json)
 			if err != nil {
 				connection.WriteJSON(Response{Success: false, Data: err.Error()})
 				continue
 			}
-			fmt.Println(packet)
+			responsePacket := ResponsePacket{Id: packet.id, Type: "response"}
+			endpoint, exists := api[packet.service][packet.method]
+			if !exists {
+				template := "invalid service and method combination: %s:%s"
+				message := fmt.Sprintf(template, packet.service, packet.data)
+				responsePacket.Response = Response{Success: false, Data: message}
+				connection.WriteJSON(responsePacket)
+				continue
+			}
+			arguments, err := CollectArguments(packet.data, endpoint.fields)
+			if err != nil {
+				responsePacket.Response = Response{Success: false, Data: "invalid arguments"}
+				connection.WriteJSON(responsePacket)
+				continue
+			}
+			result, err := Call(endpoint.function, arguments...)
+			if err != nil {
+				responsePacket.Response = Response{Success: false, Data: "invalid arguments"}
+				connection.WriteJSON(responsePacket)
+				continue
+			}
+			responsePacket.Response = result.(Response)
+			connection.WriteJSON(responsePacket)
 		}
 	}
 }

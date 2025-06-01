@@ -25,6 +25,7 @@ services:
   web-server:
     image: nginx:latest
     container_name: nginx
+    restart: unless-stopped
     volumes:
       - ./src/frontend:/usr/share/nginx/html:ro
     ports:

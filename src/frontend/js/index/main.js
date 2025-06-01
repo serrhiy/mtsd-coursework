@@ -22,7 +22,7 @@ const onChatButton = (api) => {
 const main = async () => {
   const websocket = await new WebSocketTransport('ws://127.0.0.1:8080');
   const api = scaffold(structure, websocket);
-  console.log(await api.users.exists());
+  console.log(await api.users.exists("asd"));
   saveUsernameButton.addEventListener('click', onUsernameButton.bind(null, api));
   saveChatButton.addEventListener('click', onChatButton.bind(null, api));
 };

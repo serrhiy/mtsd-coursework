@@ -14,9 +14,10 @@ export default class WebSocketTransport extends WebSocket {
     this.addEventListener('message', (event) => {
       const payload = JSON.parse(event.data);
       if (payload.type === 'response' && this.#futures.has(payload.id)) {
-        const { resolve, timer } = this.#futures.get(payload.id);
+        const { resolve, reject, timer } = this.#futures.get(payload.id);
         this.#futures.delete(payload.id);
-        resolve(payload.data);
+        const handler = payload.success ? resolve : reject;
+        handler(payload.data);
         return void clearTimeout(timer);
       }
       this.#values.put(payload.data);
@@ -40,7 +41,7 @@ export default class WebSocketTransport extends WebSocket {
         this.#futures.delete(this.#id);
       };
       const timer = setTimeout(onTimeout, this.#timeout);
-      this.#futures.set(this.#id, { resolve, timer });
+      this.#futures.set(this.#id, { resolve, reject, timer });
       this.#id++;
     });
   }

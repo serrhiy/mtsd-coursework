@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"fmt"
 )
 
 type Handler struct {
@@ -17,11 +16,9 @@ type Response struct {
 
 func apiFactory(database *sql.DB) map[string]map[string]Handler {
 	return map[string]map[string]Handler{
-		"user": {
+		"users": {
 			"exists": Handler{
-				fields: []string{"token"},
 				function: func(token string) Response {
-					fmt.Println(token)
 					return Response{Success: true, Data: false}
 				},
 			},

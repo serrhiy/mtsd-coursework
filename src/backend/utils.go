@@ -10,29 +10,29 @@ import (
 
 type RequestFormat struct {
 	service, method string
+	id              uint64
 	data            any
 }
 
-func Call(function any, args ...any) error {
+func Call(function any, args ...any) (any, error) {
 	value := reflect.ValueOf(function)
 	if value.Kind() != reflect.Func {
-		return errors.New("value is not a function")
+		return nil, errors.New("value is not a function")
 	}
 	if value.Type().NumIn() != len(args) {
-		return errors.New("invalid arguments count")
+		return nil, errors.New("invalid arguments count")
 	}
 	arguments := make([]reflect.Value, value.Type().NumIn())
 	for index := range args {
 		functionArgumentType := value.Type().In(index)
 		argumentValue := reflect.ValueOf(args[index])
 		if !argumentValue.Type().ConvertibleTo(functionArgumentType) {
-			return errors.New("invalid arguments format")
+			return nil, errors.New("invalid arguments format")
 		}
 		converted := argumentValue.Convert(functionArgumentType)
 		arguments[index] = converted
 	}
-	value.Call(arguments)
-	return nil
+	return value.Call(arguments)[0].Interface(), nil
 }
 
 func ReadFields(json map[string]any, fields []string) (map[string]any, error) {
@@ -48,7 +48,7 @@ func ReadFields(json map[string]any, fields []string) (map[string]any, error) {
 }
 
 func ParseRequestJson(json map[string]any) (RequestFormat, error) {
-	packet, err := ReadFields(json, []string{"service", "method"})
+	packet, err := ReadFields(json, []string{"service", "method", "id"})
 	if err != nil {
 		return RequestFormat{}, err
 	}
@@ -60,7 +60,11 @@ func ParseRequestJson(json map[string]any) (RequestFormat, error) {
 	if !ok {
 		return RequestFormat{}, errors.New("invalid method key")
 	}
-	return RequestFormat{service: service, method: method, data: json["data"]}, nil
+	id, ok := packet["id"].(float64)
+	if !ok {
+		return RequestFormat{}, errors.New("invalid method key")
+	}
+	return RequestFormat{service: service, method: method, data: json["data"], id: uint64(id)}, nil
 }
 
 func GetConfig(filepath string) (Config, error) {
