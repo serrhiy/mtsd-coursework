@@ -65,7 +65,7 @@ func readFields(json map[string]any, fields []string) (map[string]any, error) {
 
 type RequestFormat struct {
 	service, method string
-	data any
+	data            any
 }
 
 func parseRequestJson(json map[string]any) (RequestFormat, error) {
@@ -93,10 +93,13 @@ func mainPageRequest(_ map[string]map[string]Handler) func(http.ResponseWriter, 
 		defer connection.Close()
 		for {
 			var json map[string]any
-			connection.ReadJSON(&json)
+			if err := connection.ReadJSON(&json); err != nil {
+				message := "Invalid JSON structure"
+				connection.WriteJSON(Response{Success: false, Data: message})
+			}
 			packet, err := parseRequestJson(json)
 			if err != nil {
-				connection.WriteJSON(Response{ Success: false, Data: err.Error() })
+				connection.WriteJSON(Response{Success: false, Data: err.Error()})
 				continue
 			}
 			fmt.Println(packet)
