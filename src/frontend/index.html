@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Chat Rooms</title>
+  <link rel="stylesheet" href="css/index/main.css">
+</head>
+<body>
+  <div class="rooms-container">
+    <h2>Available Chat Rooms</h2>
+    <ul class="room-list" id="roomList">
+      <li><a href="chat.html?room=General%20Chat&nick=Alice">General Chat (created by Alice)</a></li>
+      <li><a href="chat.html?room=Programming%20Talk&nick=Bob">Programming Talk (created by Bob)</a></li>
+      <li><a href="chat.html?room=Music%20Lovers&nick=Carol">Music Lovers (created by Carol)</a></li>
+    </ul>
+  </div>
+
+  <div class="create-room-wrapper">
+    <div class="form-half">
+      <input type="text" id="usernameInput" placeholder="Your username..." />
+      <button id="saveUsernameButton">Save Name</button>
+    </div>
+    <div class="form-half">
+      <input type="text" id="roomNameInput" placeholder="New room name..." />
+      <button id="createRoomButton">Create Room</button>
+    </div>
+  </div>
+  <script type="module" src="js/index/main.js"></script>
+</body>
+</html>
