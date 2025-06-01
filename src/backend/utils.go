@@ -1,9 +1,11 @@
 package main
 
 import (
-	"reflect"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
+	"reflect"
 )
 
 type RequestFormat struct {
@@ -45,7 +47,7 @@ func ReadFields(json map[string]any, fields []string) (map[string]any, error) {
 	return response, nil
 }
 
-func parseRequestJson(json map[string]any) (RequestFormat, error) {
+func ParseRequestJson(json map[string]any) (RequestFormat, error) {
 	packet, err := ReadFields(json, []string{"service", "method"})
 	if err != nil {
 		return RequestFormat{}, err
@@ -59,4 +61,24 @@ func parseRequestJson(json map[string]any) (RequestFormat, error) {
 		return RequestFormat{}, errors.New("invalid method key")
 	}
 	return RequestFormat{service: service, method: method, data: json["data"]}, nil
+}
+
+func GetConfig(filepath string) (Config, error) {
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return Config{}, err
+	}
+	var config Config
+	err = json.Unmarshal(content, &config)
+	if err != nil {
+		return Config{}, err
+	}
+	return config, nil
+}
+
+func DatabaseURL(config DatabaseConfig) string {
+	schema := config.Engine + "://"
+	credentials := config.User + ":" + config.Password
+	destination := config.Host + ":" + config.Port
+	return schema + credentials + "@" + destination + "/" + config.Database
 }

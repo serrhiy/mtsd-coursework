@@ -1,0 +1,14 @@
+{
+  "network": {
+    "host": "0.0.0.0",
+    "port": "8080"
+  },
+  "database": {
+    "engine": "postgres",
+    "user": "marcus",
+    "password": "marcus",
+    "host": "localhost",
+    "port": "5432",
+    "database": "global_chat"
+  }
+}
