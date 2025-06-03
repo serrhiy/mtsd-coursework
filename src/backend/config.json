@@ -7,7 +7,7 @@
     "engine": "postgres",
     "user": "marcus",
     "password": "marcus",
-    "host": "localhost",
+    "host": "global_chat_database",
     "port": "5432",
     "database": "global_chat"
   }
