@@ -66,5 +66,24 @@ func apiFactory(database *sql.DB) map[string]map[string]Handler {
 				},
 			},
 		},
+		"rooms": {
+			"create": Handler{
+				fields: []string{"token", "room"},
+				function: func(token, room string) Response {
+					query := `
+						INSERT INTO rooms (title, "creatorId")
+						SELECT $1, id FROM users WHERE token = $2;
+					`
+					result, err := database.ExecContext(context.Background(), query, room, token)
+					if err != nil {
+						return Response{Success: false, Data: "such title already exists"}
+					}
+					if n, err := result.RowsAffected(); err == nil && n == 0 {
+						return Response{Success: false, Data: "user with such token is absent"}
+					}
+					return Response{Success: true}
+				},
+			},
+		},
 	}
 }

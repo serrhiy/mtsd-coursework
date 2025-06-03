@@ -19,6 +19,7 @@ create table "rooms" (
 alter table "rooms" add constraint "pkRooms" primary key ("id");
 alter table "rooms" add constraint "fkRoomCreatorId" 
   foreign key ("creatorId") references "users" ("id");
+create unique index "akRoomsTitle" on "rooms" ("title");
 
 create table "messages" (
   "message"   text not null check (length("message") >= 1),

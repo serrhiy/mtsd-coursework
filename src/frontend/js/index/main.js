@@ -14,16 +14,22 @@ const onUsernameChanged = async (api) => {
   if (username.length < 3 || username.length > 64) return;
   const token = localStorage.getItem('token');
   try {
-    await api.users.update({ username, token: "asd" });
+    await api.users.update({ username, token });
     localStorage.setItem('username', username);
   } catch (error) {
     console.error(error);
   }
 };
 
-const onChatButton = (api) => {
-  const source = roomNameInput.value.trim();
-  if (source.length === 0) return;
+const onChatButton = async (api) => {
+  const room = roomNameInput.value.trim();
+  if (room.length < 3 || room.length > 64) return;
+  const token = localStorage.getItem('token');
+  try {
+    await api.rooms.create({ room, token });
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 const setupUsername = async () => {
