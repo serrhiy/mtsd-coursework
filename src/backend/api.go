@@ -51,6 +51,20 @@ func apiFactory(database *sql.DB) map[string]map[string]Handler {
 					return Response{Success: true, Data: token}
 				},
 			},
+			"update": Handler{
+				fields: []string{"token", "username"},
+				function: func(token, username string) Response {
+					query := "update users set username = $1 where token = $2"
+					result, err := database.ExecContext(context.Background(), query, username, token)
+					if n, err := result.RowsAffected(); err == nil && n == 0 {
+						return Response{Success: false, Data: "user with such token is absent"}
+					}
+					if err != nil {
+						return Response{Success: false, Data: "inner error"}
+					}
+					return Response{Success: true}
+				},
+			},
 		},
 	}
 }

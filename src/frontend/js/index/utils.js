@@ -11,3 +11,11 @@ export const getRandomUsername = async () => {
   const { first, last } = json.results[0].name;
   return first + '-' + last;
 };
+
+export const debounce = (timeout, onTimeout) => {
+  let timer = null;
+  return () => {
+    clearTimeout(timer);
+    timer = setTimeout(onTimeout, timeout);
+  }
+};

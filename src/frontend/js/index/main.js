@@ -3,16 +3,22 @@
 import WebSocketTransport from "../WebSocketTransport.js";
 import structure from "./structure.js";
 import scaffold from "../scaffold.js";
-import { getRandomUsername } from "./utils.js";
+import { getRandomUsername, debounce } from "./utils.js";
 
-const saveUsernameButton = document.getElementById('saveUsernameButton');
 const saveChatButton = document.getElementById('createRoomButton');
 const usernameInput = document.getElementById('usernameInput');
 const roomNameInput = document.getElementById('roomNameInput');
 
-const onUsernameButton = (api) => {
-  const source = usernameInput.value.trim();
-  if (source.length === 0) return;
+const onUsernameChanged = async (api) => {
+  const username = usernameInput.value.trim();
+  if (username.length < 3 || username.length > 64) return;
+  const token = localStorage.getItem('token');
+  try {
+    await api.users.update({ username, token: "asd" });
+    localStorage.setItem('username', username);
+  } catch (error) {
+    console.error(error);
+  }
 };
 
 const onChatButton = (api) => {
@@ -50,7 +56,8 @@ const main = async () => {
   const api = scaffold(structure, websocket);
   await setupUsername();
   await setupToken(api);
-  saveUsernameButton.addEventListener('click', onUsernameButton.bind(null, api));
+  const usernameChanged = onUsernameChanged.bind(null, api);
+  usernameInput.addEventListener('input', debounce(3000, usernameChanged));
   saveChatButton.addEventListener('click', onChatButton.bind(null, api));
 };
 
