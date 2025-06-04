@@ -5,9 +5,21 @@ import structure from "./structure.js";
 import scaffold from "../scaffold.js";
 import { getRandomUsername, debounce } from "./utils.js";
 
+const DOMAIN = 'localhost';
+
 const saveChatButton = document.getElementById('createRoomButton');
 const usernameInput = document.getElementById('usernameInput');
 const roomNameInput = document.getElementById('roomNameInput');
+const roomList = document.getElementById('roomList');
+
+const buildRoomLink = (title, token, username) => {
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.href = `http://${DOMAIN}/${token}`;
+  a.text = `${title} (created by ${username})`;
+  li.appendChild(a);
+  return li;
+};
 
 const onUsernameChanged = async (api) => {
   const username = usernameInput.value.trim();
@@ -26,7 +38,11 @@ const onChatButton = async (api) => {
   if (room.length < 3 || room.length > 64) return;
   const token = localStorage.getItem('token');
   try {
-    await api.rooms.create({ room, token });
+    const response = await api.rooms.create({ room, token });
+    const { title, username, token: roomsToken } = response;
+    const node = buildRoomLink(title, roomsToken, username);
+    roomList.appendChild(node);
+    roomNameInput.value = '';
   } catch (error) {
     console.error(error);
   }
@@ -58,10 +74,15 @@ const setupToken = async (api) => {
 };
 
 const main = async () => {
-  const websocket = await new WebSocketTransport('ws://127.0.0.1:8080');
+  const websocket = await new WebSocketTransport(`ws://${DOMAIN}:8080`);
   const api = scaffold(structure, websocket);
   await setupUsername();
   await setupToken(api);
+  const rooms = await api.rooms.get(); 
+  for (const { title, token, username } of rooms) {
+    const node = buildRoomLink(title, token, username);
+    roomList.appendChild(node);
+  }
   const usernameChanged = onUsernameChanged.bind(null, api);
   usernameInput.addEventListener('input', debounce(3000, usernameChanged));
   saveChatButton.addEventListener('click', onChatButton.bind(null, api));

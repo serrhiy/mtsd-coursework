@@ -29,6 +29,9 @@ type ResponsePacket struct {
 
 func CollectArguments(data any, fields []string) ([]any, error) {
 	if fields == nil {
+		if data == nil {
+			return []any{}, nil
+		}
 		return []any{data}, nil
 	}
 	object, ok := data.(map[string]any)
@@ -85,7 +88,7 @@ func mainPageRequest(api map[string]map[string]Handler) func(http.ResponseWriter
 			}
 			result, err := Call(endpoint.function, arguments...)
 			if err != nil {
-				responsePacket.Response = Response{Success: false, Data: "invalid arguments"}
+				responsePacket.Response = Response{Success: false, Data: err.Error()}
 				connection.WriteJSON(responsePacket)
 				continue
 			}

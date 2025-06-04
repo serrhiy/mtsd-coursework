@@ -11,6 +11,7 @@ create unique index "akUserToken" on "users" ("token");
 
 create table "rooms" (
   "id"        bigint generated always as identity,
+  "token"     char(32),
   "title"     varchar(64) not null check (length("title") >= 3),
   "createdAt" timestamptz default current_timestamp,
   "creatorId" bigint not null
@@ -20,6 +21,7 @@ alter table "rooms" add constraint "pkRooms" primary key ("id");
 alter table "rooms" add constraint "fkRoomCreatorId" 
   foreign key ("creatorId") references "users" ("id");
 create unique index "akRoomsTitle" on "rooms" ("title");
+create unique index "akRoomsToken" on "rooms" ("token");
 
 create table "messages" (
   "message"   text not null check (length("message") >= 1),
@@ -28,7 +30,6 @@ create table "messages" (
   "createdAt" timestamptz default current_timestamp
 );
 
-alter table "messages" add constraint "pkMessages" primary key ("id");
 alter table "messages" add constraint "fkMessagesUserIdUsers"
   foreign key ("userId") references "users" ("id");
 alter table "messages" add constraint "fkMessagesRoomIdRooms"

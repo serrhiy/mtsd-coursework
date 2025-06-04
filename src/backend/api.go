@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"database/sql"
 	"encoding/hex"
+	"time"
 )
 
 type Handler struct {
@@ -71,17 +72,62 @@ func apiFactory(database *sql.DB) map[string]map[string]Handler {
 				fields: []string{"token", "room"},
 				function: func(token, room string) Response {
 					query := `
-						INSERT INTO rooms (title, "creatorId")
-						SELECT $1, id FROM users WHERE token = $2;
+						with user_data as (select id, username from users where token = $1),
+						inserted as (
+							insert into rooms (title, token, "creatorId") 
+							select $2, $3, id from user_data returning "createdAt", "creatorId"
+						)
+						select inserted."createdAt", user_data.username 
+						from inserted join user_data on inserted."creatorId" = user_data.id
 					`
-					result, err := database.ExecContext(context.Background(), query, room, token)
-					if err != nil {
+					roomsToken := generateToken()
+					row := database.QueryRowContext(context.Background(), query, token, room, roomsToken)
+					if row.Err() != nil {
 						return Response{Success: false, Data: "such title already exists"}
 					}
-					if n, err := result.RowsAffected(); err == nil && n == 0 {
+					var createdAt sql.NullTime
+					var username sql.NullString
+					row.Scan(&createdAt, &username)
+					if !createdAt.Valid || !username.Valid {
 						return Response{Success: false, Data: "user with such token is absent"}
 					}
-					return Response{Success: true}
+					json := map[string]any {
+						"title": room,
+						"createdAt": createdAt,
+						"username": username.String,
+						"token": roomsToken,
+					}
+					return Response{Success: true, Data: json}
+				},
+			},
+			"get": Handler{
+				function: func() Response {
+					query := `
+						select title, rooms."createdAt", username, rooms.token
+						from rooms join users on "creatorId" = users.id
+					`
+					rows, err := database.QueryContext(context.Background(), query)
+					if err != nil {
+						return Response{Success: false, Data: "inner error"}
+					}
+					defer rows.Close()
+					result := make([]map[string]any, 0)
+					for rows.Next() {
+						var title, username, token string
+						var createdAt time.Time
+						err := rows.Scan(&title, &createdAt, &username, &token)
+						if err != nil {
+							return Response{Success: false, Data: "inner error"}
+						}
+						json := map[string]any {
+							"title": title,
+							"createdAt": createdAt,
+							"username": username,
+							"token": token,
+						}
+						result = append(result, json)
+					}
+					return Response{Success: true, Data: result}
 				},
 			},
 		},
