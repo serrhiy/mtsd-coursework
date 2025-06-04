@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -27,35 +26,33 @@ type ResponsePacket struct {
 	Type string `json:"type"`
 }
 
-func CollectArguments(data any, fields []string) ([]any, error) {
-	if fields == nil {
-		if data == nil {
-			return []any{}, nil
-		}
-		return []any{data}, nil
+func handleRequest(packet RequestFormat, api map[string]map[string]Handler) Response {
+	endpoint, exists := api[packet.Service][packet.Method]
+	if !exists {
+		template := "invalid service and method combination: %s:%s"
+		message := fmt.Sprintf(template, packet.Service, packet.Data)
+		return Response{Success: false, Data: message}
 	}
-	object, ok := data.(map[string]any)
-	if !ok {
-		return nil, errors.New("invalid arguments")
+	arguments, err := CollectArguments(packet.Data, endpoint.fields)
+	if err != nil {
+		return Response{Success: false, Data: "invalid arguments"}
 	}
-	result := make([]any, len(object))
-	for index, field := range fields {
-		value, exists := object[field]
-		if !exists {
-			return nil, errors.New("key " + field + " is absent")
-		}
-		result[index] = value
+	result, err := Call(endpoint.function, arguments...)
+	if err != nil {
+		return Response{Success: false, Data: err.Error()}
 	}
-	return result, nil
+	return result.(Response)
 }
 
-func mainPageRequest(api map[string]map[string]Handler) func(http.ResponseWriter, *http.Request) {
+func onRequest(api map[string]map[string]Handler) func(http.ResponseWriter, *http.Request) {
+	connections := make(map[*websocket.Conn]struct{})
 	return func(writer http.ResponseWriter, request *http.Request) {
 		connection, err := upgrader.Upgrade(writer, request, nil)
 		if err != nil {
 			return
 		}
 		defer connection.Close()
+		connections[connection] = struct{}{}
 		for {
 			var json map[string]any
 			if err := connection.ReadJSON(&json); err != nil {
@@ -71,29 +68,18 @@ func mainPageRequest(api map[string]map[string]Handler) func(http.ResponseWriter
 				connection.WriteJSON(Response{Success: false, Data: err.Error()})
 				continue
 			}
-			responsePacket := ResponsePacket{Id: packet.id, Type: "response"}
-			endpoint, exists := api[packet.service][packet.method]
-			if !exists {
-				template := "invalid service and method combination: %s:%s"
-				message := fmt.Sprintf(template, packet.service, packet.data)
-				responsePacket.Response = Response{Success: false, Data: message}
-				connection.WriteJSON(responsePacket)
-				continue
+			responsePacket := ResponsePacket{
+				Id:       packet.Id,
+				Type:     "response",
+				Response: handleRequest(packet, api),
 			}
-			arguments, err := CollectArguments(packet.data, endpoint.fields)
-			if err != nil {
-				responsePacket.Response = Response{Success: false, Data: "invalid arguments"}
-				connection.WriteJSON(responsePacket)
-				continue
-			}
-			result, err := Call(endpoint.function, arguments...)
-			if err != nil {
-				responsePacket.Response = Response{Success: false, Data: err.Error()}
-				connection.WriteJSON(responsePacket)
-				continue
-			}
-			responsePacket.Response = result.(Response)
 			connection.WriteJSON(responsePacket)
+			if responsePacket.Success && packet.Service == "rooms" && packet.Method == "create" {
+				message := map[string]any{"data": responsePacket.Data}
+				for connection := range connections {
+					connection.WriteJSON(message)
+				}
+			}
 		}
 	}
 }
@@ -108,6 +94,6 @@ func main() {
 		fmt.Fprint(os.Stdout, "Cannot initialise database\n")
 	}
 	address := net.JoinHostPort(config.Network.Host, config.Network.Port)
-	http.HandleFunc("/", mainPageRequest(apiFactory(database)))
+	http.HandleFunc("/", onRequest(apiFactory(database)))
 	http.ListenAndServe(address, nil)
 }

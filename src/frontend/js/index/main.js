@@ -33,15 +33,12 @@ const onUsernameChanged = async (api) => {
   }
 };
 
-const onChatButton = async (api) => {
+const createChat = async (api) => {
   const room = roomNameInput.value.trim();
   if (room.length < 3 || room.length > 64) return;
   const token = localStorage.getItem('token');
   try {
-    const response = await api.rooms.create({ room, token });
-    const { title, username, token: roomsToken } = response;
-    const node = buildRoomLink(title, roomsToken, username);
-    roomList.appendChild(node);
+    await api.rooms.create({ room, token });
     roomNameInput.value = '';
   } catch (error) {
     console.error(error);
@@ -85,7 +82,12 @@ const main = async () => {
   }
   const usernameChanged = onUsernameChanged.bind(null, api);
   usernameInput.addEventListener('input', debounce(3000, usernameChanged));
-  saveChatButton.addEventListener('click', onChatButton.bind(null, api));
+  saveChatButton.addEventListener('click', createChat.bind(null, api));
+  for await (const message of websocket) {
+    const { title, username, token: roomsToken } = message;
+    const node = buildRoomLink(title, roomsToken, username);
+    roomList.appendChild(node);
+  }
 };
 
 main();

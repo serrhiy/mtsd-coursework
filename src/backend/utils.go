@@ -9,9 +9,9 @@ import (
 )
 
 type RequestFormat struct {
-	service, method string
-	id              uint64
-	data            any
+	Service, Method string
+	Id              uint64
+	Data            any
 }
 
 func Call(function any, args ...any) (any, error) {
@@ -64,7 +64,7 @@ func ParseRequestJson(json map[string]any) (RequestFormat, error) {
 	if !ok {
 		return RequestFormat{}, errors.New("invalid method key")
 	}
-	return RequestFormat{service: service, method: method, data: json["data"], id: uint64(id)}, nil
+	return RequestFormat{Service: service, Method: method, Data: json["data"], Id: uint64(id)}, nil
 }
 
 func GetConfig(filepath string) (Config, error) {
@@ -85,4 +85,26 @@ func DatabaseURL(config DatabaseConfig) string {
 	credentials := config.User + ":" + config.Password
 	destination := config.Host + ":" + config.Port
 	return schema + credentials + "@" + destination + "/" + config.Database
+}
+
+func CollectArguments(data any, fields []string) ([]any, error) {
+	if fields == nil {
+		if data == nil {
+			return []any{}, nil
+		}
+		return []any{data}, nil
+	}
+	object, ok := data.(map[string]any)
+	if !ok {
+		return nil, errors.New("invalid arguments")
+	}
+	result := make([]any, len(object))
+	for index, field := range fields {
+		value, exists := object[field]
+		if !exists {
+			return nil, errors.New("key " + field + " is absent")
+		}
+		result[index] = value
+	}
+	return result, nil
 }

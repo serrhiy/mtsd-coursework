@@ -91,11 +91,11 @@ func apiFactory(database *sql.DB) map[string]map[string]Handler {
 					if !createdAt.Valid || !username.Valid {
 						return Response{Success: false, Data: "user with such token is absent"}
 					}
-					json := map[string]any {
-						"title": room,
-						"createdAt": createdAt,
-						"username": username.String,
-						"token": roomsToken,
+					json := map[string]any{
+						"title":     room,
+						"createdAt": createdAt.Time,
+						"username":  username.String,
+						"token":     roomsToken,
 					}
 					return Response{Success: true, Data: json}
 				},
@@ -119,11 +119,11 @@ func apiFactory(database *sql.DB) map[string]map[string]Handler {
 						if err != nil {
 							return Response{Success: false, Data: "inner error"}
 						}
-						json := map[string]any {
-							"title": title,
+						json := map[string]any{
+							"title":     title,
 							"createdAt": createdAt,
-							"username": username,
-							"token": token,
+							"username":  username,
+							"token":     token,
 						}
 						result = append(result, json)
 					}
